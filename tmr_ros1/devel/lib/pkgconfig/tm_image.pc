@@ -1,0 +1,8 @@
+prefix=/home/jiayulin/robot_magic_tm12/tmr_ros1/devel
+
+Name: tm_image
+Description: Description of tm_image
+Version: 1.0.0
+Cflags: 
+Libs: -L${prefix}/lib 
+Requires: 
