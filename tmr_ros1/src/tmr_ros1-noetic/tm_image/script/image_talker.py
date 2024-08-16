@@ -146,7 +146,8 @@ def get(m_method):
 def post(m_method):
     print('\n[{0}] [{1}] -> Post({2})'.format(request.environ['REMOTE_ADDR'], datetime.now(), m_method))
     # get key/value
-    model_id = request.args.get('model_id')
+    # model_id = request.args.get('model_id')
+    model_id = 'test'
     print('model_id: {}'.format(model_id))
 
     # check key/value
