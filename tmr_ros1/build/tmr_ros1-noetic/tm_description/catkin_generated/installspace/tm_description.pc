@@ -1,0 +1,8 @@
+prefix=/home/jiayulin/robot_magic_tm12/tmr_ros1/install
+
+Name: tm_description
+Description: Description of tm_description
+Version: 1.1.2
+Cflags: 
+Libs: -L${prefix}/lib 
+Requires: 
