@@ -34,7 +34,8 @@ class EpisodicDataset(torch.utils.data.Dataset):
 
         with h5py.File(dataset_path, 'r') as root:
             is_sim = root.attrs['sim']
-            is_compress = root.attrs['compress']
+            # is_compress = root.attrs['compress']
+            is_compress = root.attrs.get('compress', False)  # 如果屬性不存在，則設置為 False 或其他預設值
             original_action_shape = root['/action'].shape
             max_action_len = original_action_shape[0]  # max_episode
             if self.use_robot_base:
@@ -51,7 +52,9 @@ class EpisodicDataset(torch.utils.data.Dataset):
             for cam_name in self.camera_names:
                 if is_compress:
                     decoded_image = root[f'/observations/images/{cam_name}'][start_ts]
-                    image_dict[cam_name] = cv2.imdecode(decoded_image, 1)
+                    image = cv2.imdecode(decoded_image, 1)
+                    image = cv2.resize(image, (640, 480))  # 保持和生成時的image_shape一致
+                    image_dict[cam_name] = image
                     # print(image_dict[cam_name].shape)
                     # exit(-1)
                 else:

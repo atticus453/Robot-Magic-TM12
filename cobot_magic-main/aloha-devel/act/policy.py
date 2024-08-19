@@ -1,5 +1,6 @@
 import torch.nn as nn
 from torch.nn import functional as F
+import torch
 import torchvision.transforms as transforms
 from detr.main import build_ACT_model_and_optimizer, build_CNNMLP_model_and_optimizer, build_diffusion_model_and_optimizer
 
@@ -56,7 +57,16 @@ class ACTPolicy(nn.Module):
         normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
                                          std=[0.229, 0.224, 0.225])
         depth_normalize = transforms.Normalize(mean=[0.5], std=[0.5])
-
+        # make Image type: ??? -> Tensor
+        if not isinstance(image, torch.Tensor):
+            if callable(image):
+                raise ValueError("`image` 是一個函數或方法，請檢查 image 的來源。")
+            else:
+                try:
+                    image = np.array(image)  # 嘗試將其轉換為 numpy 數組
+                except Exception as e:
+                    raise ValueError(f"`image` 不是一個有效的數據結構: {e}")
+            image = torch.tensor(image)
         image = normalize(image)  # 图像归一化
         if depth_image is not None:
             depth_image = depth_normalize(depth_image)
@@ -76,7 +86,7 @@ class ACTPolicy(nn.Module):
             else:
                 all_l1 = F.smooth_l1_loss(actions, a_hat, reduction='none')
 
-            l1 = (all_l1 * ~action_is_pad.unsqueeze(-1)).mean()
+            l1 = (all_l1 * (~action_is_pad.bool()).unsqueeze(-1)).mean()
 
             loss_dict['l1'] = l1
             if self.kl_weight != 0:

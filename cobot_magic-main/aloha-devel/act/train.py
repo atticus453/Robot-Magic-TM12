@@ -127,11 +127,11 @@ def train(args):
 def make_policy(policy_class, policy_config, pretrain_ckpt_dir):
     if policy_class == 'ACT':
         policy = ACTPolicy(policy_config)
-        if len(pretrain_ckpt_dir) != 0:
-            state_dict = torch.load(pretrain_ckpt_dir)
-            loading_status = policy.deserialize(state_dict)
-            if not loading_status:
-                print("ckpt path not exist")
+        # if len(pretrain_ckpt_dir) != 0:
+        #     state_dict = torch.load(pretrain_ckpt_dir)
+        #     loading_status = policy.deserialize(state_dict)
+        #     if not loading_status:
+        #         print("ckpt path not exist")
 
     elif policy_class == 'CNNMLP':
         policy = CNNMLPPolicy(policy_config)
@@ -139,7 +139,7 @@ def make_policy(policy_class, policy_config, pretrain_ckpt_dir):
             loading_status = policy.deserialize(torch.load(pretrain_ckpt_dir))
             if not loading_status:
                 print("ckpt path not exist")
-    elif policy_class == 'Diffusion':
+    elif policy_class == 'Diffusion': 
         policy = DiffusionPolicy(policy_config)
         if len(pretrain_ckpt_dir) != 0:
             loading_status = policy.deserialize(torch.load(pretrain_ckpt_dir))
@@ -164,10 +164,10 @@ def make_optimizer(policy_class, policy):
 
 def forward_pass(policy_config, data, policy):
     image_data, image_depth_data, qpos_data, action_data, action_is_pad = data
-    (image_data, qpos_data, action_data, action_is_pad) = (image_data.cuda(), qpos_data.cuda(),
-                                                           action_data.cuda(), action_is_pad.cuda())
+    (image_data, qpos_data, action_data, action_is_pad) = (image_data.cuda().float(), qpos_data.cuda().float(),
+                                                           action_data.cuda().float(), action_is_pad.cuda().float())
     if policy_config['use_depth_image']:
-        image_depth_data = image_depth_data.cuda()
+        image_depth_data = image_depth_data.cuda().float()
     else:
         image_depth_data = None
     return policy(image_data, image_depth_data, qpos_data, action_data, action_is_pad)
@@ -185,6 +185,7 @@ def train_process(train_dataloader, val_dataloader, config, stats):
 
     policy = make_policy(policy_class, policy_config, pretrain_ckpt_dir)
     policy.cuda()
+    policy.float()
     optimizer = make_optimizer(policy_class, policy)
 
     train_history = []
