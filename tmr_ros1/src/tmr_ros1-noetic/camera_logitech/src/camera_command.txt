@@ -1,0 +1,17 @@
+列出可用相機
+ffmpeg -f avfoundation -list_devices true -i ""
+
+從本地發送至 Jling
+（沒壓縮版本）
+$ gst-launch-1.0 avfvideosrc device-index=1 ! videoconvert ! x264enc ! rtph264pay ! udpsink host=10.72.221.29 port=5000
+（壓縮+queue版本）
+gst-launch-1.0 avfvideosrc device-index=1 ! videoconvert ! videoscale ! video/x-raw,width=640,height=480 ! videorate ! video/x-raw,framerate=15/1 ! x264enc ! rtph264pay ! queue ! udpsink host=10.72.221.29 port=5000
+
+在Jling上接收影像流
+gst-launch-1.0 udpsrc port=5000 caps="application/x-rtp" ! rtph264depay ! avdec_h264 ! videoconvert ! autovideosink
+
+gst-launch-1.0 udpsrc port=5000 caps="application/x-rtp,media=video,encoding-name=H264,payload=96" ! rtph264depay ! queue ! h264parse ! avdec_h264 ! videoconvert ! queue ! xvimagesink
+
+
+catkin_create_pkg camera_logitech rospy std_msgs sensor_msgs cv_bridge image_transport
+
