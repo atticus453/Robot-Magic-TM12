@@ -21,8 +21,6 @@ from std_msgs.msg import Header
 from geometry_msgs.msg import Twist
 from sensor_msgs.msg import JointState, Image
 from nav_msgs.msg import Odometry
-from tm_msgs.srv import SetPositions, SetPositionsRequest
-from tm_msgs.msg import FeedbackState
 from cv_bridge import CvBridge
 import time
 import threading
@@ -221,11 +219,11 @@ def inference_process(args, config, ros_operator, policy, stats, t, pre_action):
             obs['images_depth'] = image_depth_dict
 
         obs['qpos'] = np.concatenate(
-            (np.array(puppet_arm_left['position']), np.array(puppet_arm_right['position'])), axis=0)
+            (np.array(puppet_arm_left.position), np.array(puppet_arm_right.position)), axis=0)
         obs['qvel'] = np.concatenate(
-            (np.array(puppet_arm_left['velocity']), np.array(puppet_arm_right['velocity'])), axis=0)
+            (np.array(puppet_arm_left.velocity), np.array(puppet_arm_right.velocity)), axis=0)
         obs['effort'] = np.concatenate(
-            (np.array(puppet_arm_left['effort']), np.array(puppet_arm_right['effort'])), axis=0)
+            (np.array(puppet_arm_left.effort), np.array(puppet_arm_right.effort)), axis=0)
         if args.use_robot_base:
             obs['base_vel'] = [robot_base.twist.twist.linear.x, robot_base.twist.twist.angular.z]
             obs['qpos'] = np.concatenate((obs['qpos'], obs['base_vel']), axis=0)
@@ -245,7 +243,6 @@ def inference_process(args, config, ros_operator, policy, stats, t, pre_action):
         all_actions = policy(curr_image, curr_depth_image, qpos)
         end_time = time.time()
         print("model cost time: ", end_time -start_time)
-
         inference_lock.acquire()
         inference_actions = all_actions.cpu().detach().numpy()
         if pre_action is None:
@@ -302,13 +299,12 @@ def model_inference(args, config, ros_operator, save_episode=True):
     chunk_size = config['policy_config']['chunk_size']
 
     # 发布基础的姿态
-    left0 = [-0.00133514404296875, 1.00209808349609375, 1.01583099365234375, -0.032616615295410156, -0.00286102294921875, 0.00095367431640625, 3.557830810546875]
+    left0 = [-0.00133514404296875, 0.00209808349609375, 0.01583099365234375, -0.032616615295410156, -0.00286102294921875, 0.00095367431640625, 3.557830810546875]
     right0 = [-0.00133514404296875, 0.00438690185546875, 0.034523963928222656, -0.053597450256347656, -0.00476837158203125, -0.00209808349609375, 3.557830810546875]
-    left1 = [-0.00133514404296875, 1.00209808349609375, 1.01583099365234375, -0.032616615295410156, -0.00286102294921875, 0.00095367431640625, -0.3393220901489258]
+    left1 = [-0.00133514404296875, 0.00209808349609375, 0.01583099365234375, -0.032616615295410156, -0.00286102294921875, 0.00095367431640625, -0.3393220901489258]
     right1 = [-0.00133514404296875, 0.00247955322265625, 0.01583099365234375, -0.032616615295410156, -0.00286102294921875, 0.00095367431640625, -0.3397035598754883]
     
     ros_operator.puppet_arm_publish_continuous(left0, right0)
-
     input("Enter any key to continue :")
     ros_operator.puppet_arm_publish_continuous(left1, right1)
     action = None
@@ -372,6 +368,7 @@ def model_inference(args, config, ros_operator, save_episode=True):
                 # print("right_action:", right_action)
                 rate.sleep()
 
+
 class RosOperator:
     def __init__(self, args):
         self.robot_base_deque = None
@@ -410,53 +407,14 @@ class RosOperator:
         self.puppet_arm_publish_lock.acquire()
 
     def puppet_arm_publish(self, left, right):
-        # positions = left + right
-        positions = left[:6]
-        try:
-            set_positions = rospy.ServiceProxy('tm_driver/set_positions', SetPositions)
-            req = SetPositionsRequest()
-            req.motion_type = SetPositionsRequest.PTP_J
-            req.positions = positions
-            req.velocity = 0.4  # 可根據需求調整速度
-            req.acc_time = 0.2
-            req.blend_percentage = 10
-            req.fine_goal = False
-
-            rospy.loginfo(f"Moving TM12 joints to positions: {positions}")
-            response = set_positions(req)
-
-            if response.ok:
-                rospy.loginfo("TM12 movement successful")
-            else:
-                rospy.logwarn("TM12 movement not confirmed by robot")
-
-        except rospy.ServiceException as e:
-            rospy.logerr(f"Service call failed: {e}")
-
-    def puppet_arm_publish_continuous(self, left, right):
-        # positions = left + right
-        positions = left[:6]
-        try:
-            set_positions = rospy.ServiceProxy('tm_driver/set_positions', SetPositions)
-            req = SetPositionsRequest()
-            req.motion_type = SetPositionsRequest.PTP_J
-            req.positions = positions
-            req.velocity = 0.4  # 可根據需求調整速度
-            req.acc_time = 0.2
-            req.blend_percentage = 10
-            req.fine_goal = False
-
-            rospy.loginfo(f"Moving TM12 joints to positions: {positions}")
-            response = set_positions(req)
-
-            if response.ok:
-                rospy.loginfo("TM12 continuous movement successful")
-            else:
-                rospy.logwarn("TM12 continuous movement not confirmed by robot")
-
-            rospy.sleep(0.1)  # Sleep between movements
-        except rospy.ServiceException as e:
-            rospy.logerr(f"Service call failed: {e}")
+        joint_state_msg = JointState()
+        joint_state_msg.header = Header()
+        joint_state_msg.header.stamp = rospy.Time.now()  # 设置时间戳
+        joint_state_msg.name = ['joint0', 'joint1', 'joint2', 'joint3', 'joint4', 'joint5', 'joint6']  # 设置关节名称
+        joint_state_msg.position = left
+        self.puppet_arm_left_publisher.publish(joint_state_msg)
+        joint_state_msg.position = right
+        self.puppet_arm_right_publisher.publish(joint_state_msg)
 
     def robot_base_publish(self, vel):
         vel_msg = Twist()
@@ -467,6 +425,90 @@ class RosOperator:
         vel_msg.angular.y = 0
         vel_msg.angular.z = vel[1]
         self.robot_base_publisher.publish(vel_msg)
+
+    def puppet_arm_publish_continuous(self, left, right):
+        rate = rospy.Rate(self.args.publish_rate)
+        left_arm = None
+        right_arm = None
+        while True and not rospy.is_shutdown():
+            if len(self.puppet_arm_left_deque) != 0:
+                left_arm = list(self.puppet_arm_left_deque[-1].position)
+            if len(self.puppet_arm_right_deque) != 0:
+                right_arm = list(self.puppet_arm_right_deque[-1].position)
+            if left_arm is None or right_arm is None:
+                rate.sleep()
+                continue
+            else:
+                break
+        left_symbol = [1 if left[i] - left_arm[i] > 0 else -1 for i in range(len(left))]
+        right_symbol = [1 if right[i] - right_arm[i] > 0 else -1 for i in range(len(right))]
+        flag = True
+        step = 0
+        while flag and not rospy.is_shutdown():
+            if self.puppet_arm_publish_lock.acquire(False):
+                return
+            left_diff = [abs(left[i] - left_arm[i]) for i in range(len(left))]
+            right_diff = [abs(right[i] - right_arm[i]) for i in range(len(right))]
+            flag = False
+            for i in range(len(left)):
+                if left_diff[i] < self.args.arm_steps_length[i]:
+                    left_arm[i] = left[i]
+                else:
+                    left_arm[i] += left_symbol[i] * self.args.arm_steps_length[i]
+                    flag = True
+            for i in range(len(right)):
+                if right_diff[i] < self.args.arm_steps_length[i]:
+                    right_arm[i] = right[i]
+                else:
+                    right_arm[i] += right_symbol[i] * self.args.arm_steps_length[i]
+                    flag = True
+            joint_state_msg = JointState()
+            joint_state_msg.header = Header()
+            joint_state_msg.header.stamp = rospy.Time.now()  # 设置时间戳
+            joint_state_msg.name = ['joint0', 'joint1', 'joint2', 'joint3', 'joint4', 'joint5', 'joint6']  # 设置关节名称
+            joint_state_msg.position = left_arm
+            self.puppet_arm_left_publisher.publish(joint_state_msg)
+            joint_state_msg.position = right_arm
+            self.puppet_arm_right_publisher.publish(joint_state_msg)
+            step += 1
+            print("puppet_arm_publish_continuous:", step)
+            rate.sleep()
+
+    def puppet_arm_publish_linear(self, left, right):
+        num_step = 100
+        rate = rospy.Rate(200)
+
+        left_arm = None
+        right_arm = None
+
+        while True and not rospy.is_shutdown():
+            if len(self.puppet_arm_left_deque) != 0:
+                left_arm = list(self.puppet_arm_left_deque[-1].position)
+            if len(self.puppet_arm_right_deque) != 0:
+                right_arm = list(self.puppet_arm_right_deque[-1].position)
+            if left_arm is None or right_arm is None:
+                rate.sleep()
+                continue
+            else:
+                break
+
+        traj_left_list = np.linspace(left_arm, left, num_step)
+        traj_right_list = np.linspace(right_arm, right, num_step)
+
+        for i in range(len(traj_left_list)):
+            traj_left = traj_left_list[i]
+            traj_right = traj_right_list[i]
+            traj_left[-1] = left[-1]
+            traj_right[-1] = right[-1]
+            joint_state_msg = JointState()
+            joint_state_msg.header = Header()
+            joint_state_msg.header.stamp = rospy.Time.now()  # 设置时间戳
+            joint_state_msg.name = ['joint0', 'joint1', 'joint2', 'joint3', 'joint4', 'joint5', 'joint6']  # 设置关节名称
+            joint_state_msg.position = traj_left
+            self.puppet_arm_left_publisher.publish(joint_state_msg)
+            joint_state_msg.position = traj_right
+            self.puppet_arm_right_publisher.publish(joint_state_msg)
+            rate.sleep()
 
     def puppet_arm_publish_continuous_thread(self, left, right):
         if self.puppet_arm_publish_thread is not None:
@@ -480,7 +522,6 @@ class RosOperator:
     def get_frame(self):
         if len(self.img_left_deque) == 0 or len(self.img_right_deque) == 0 or len(self.img_front_deque) == 0 or \
                 (self.args.use_depth_image and (len(self.img_left_depth_deque) == 0 or len(self.img_right_depth_deque) == 0 or len(self.img_front_depth_deque) == 0)):
-            print("here")
             return False
         if self.args.use_depth_image:
             frame_time = min([self.img_left_deque[-1].header.stamp.to_sec(), self.img_right_deque[-1].header.stamp.to_sec(), self.img_front_deque[-1].header.stamp.to_sec(),
@@ -488,36 +529,23 @@ class RosOperator:
         else:
             frame_time = min([self.img_left_deque[-1].header.stamp.to_sec(), self.img_right_deque[-1].header.stamp.to_sec(), self.img_front_deque[-1].header.stamp.to_sec()])
 
-        puppet_arm_left = self.puppet_arm_left_deque.popleft()
-        puppet_arm_right = self.puppet_arm_right_deque.popleft()
-
         if len(self.img_left_deque) == 0 or self.img_left_deque[-1].header.stamp.to_sec() < frame_time:
-            print("here2")
             return False
         if len(self.img_right_deque) == 0 or self.img_right_deque[-1].header.stamp.to_sec() < frame_time:
-            print("here3")
             return False
         if len(self.img_front_deque) == 0 or self.img_front_deque[-1].header.stamp.to_sec() < frame_time:
-            print("here4")
             return False
-
-        if len(self.puppet_arm_left_deque) == 0 or self.puppet_arm_left_deque[-1]['header'].stamp.to_sec() < frame_time:
-            print("here5")
+        if len(self.puppet_arm_left_deque) == 0 or self.puppet_arm_left_deque[-1].header.stamp.to_sec() < frame_time:
             return False
-        if len(self.puppet_arm_right_deque) == 0 or self.puppet_arm_right_deque[-1]['header'].stamp.to_sec() < frame_time:
-            print("here6")
+        if len(self.puppet_arm_right_deque) == 0 or self.puppet_arm_right_deque[-1].header.stamp.to_sec() < frame_time:
             return False
         if self.args.use_depth_image and (len(self.img_left_depth_deque) == 0 or self.img_left_depth_deque[-1].header.stamp.to_sec() < frame_time):
-            print("here7")
             return False
         if self.args.use_depth_image and (len(self.img_right_depth_deque) == 0 or self.img_right_depth_deque[-1].header.stamp.to_sec() < frame_time):
-            print("here8")
             return False
         if self.args.use_depth_image and (len(self.img_front_depth_deque) == 0 or self.img_front_depth_deque[-1].header.stamp.to_sec() < frame_time):
-            print("here9")
             return False
         if self.args.use_robot_base and (len(self.robot_base_deque) == 0 or self.robot_base_deque[-1].header.stamp.to_sec() < frame_time):
-            print("here10")
             return False
 
         while self.img_left_deque[0].header.stamp.to_sec() < frame_time:
@@ -532,16 +560,13 @@ class RosOperator:
             self.img_front_deque.popleft()
         img_front = self.bridge.imgmsg_to_cv2(self.img_front_deque.popleft(), 'passthrough')
 
-        # while self.puppet_arm_left_deque[0].header.stamp.to_sec() < frame_time:
-        #     self.puppet_arm_left_deque.popleft()
-        # puppet_arm_left = self.puppet_arm_left_deque.popleft()
+        while self.puppet_arm_left_deque[0].header.stamp.to_sec() < frame_time:
+            self.puppet_arm_left_deque.popleft()
+        puppet_arm_left = self.puppet_arm_left_deque.popleft()
 
-        # while self.puppet_arm_right_deque[0].header.stamp.to_sec() < frame_time:
-        #     self.puppet_arm_right_deque.popleft()
-        # puppet_arm_right = self.puppet_arm_right_deque.popleft()
-
-        # use feedback to replace original JointState methods
-
+        while self.puppet_arm_right_deque[0].header.stamp.to_sec() < frame_time:
+            self.puppet_arm_right_deque.popleft()
+        puppet_arm_right = self.puppet_arm_right_deque.popleft()
 
         img_left_depth = None
         if self.args.use_depth_image:
@@ -573,7 +598,6 @@ class RosOperator:
     def img_left_callback(self, msg):
         if len(self.img_left_deque) >= 2000:
             self.img_left_deque.popleft()
-        
         self.img_left_deque.append(msg)
 
     def img_right_callback(self, msg):
@@ -627,49 +651,8 @@ class RosOperator:
         self.ctrl_state_lock.release()
         return state
 
-    # we use feedback to receive robot arm pos
-    def feedback_callback(self, msg):
-        # 假設 puppet_arm_left_deque 和 puppet_arm_right_deque 分別儲存左右手臂資料
-        if len(self.puppet_arm_left_deque) >= 2000:
-            self.puppet_arm_left_deque.popleft()
-        if len(self.puppet_arm_right_deque) >= 2000:
-            self.puppet_arm_right_deque.popleft()
-
-
-        # 直接使用 msg.header
-        header = msg.header
-
-        # 將爪子的狀態（0.0）添加到 joint_pos 的末尾
-        joint_pos_with_gripper = list(msg.joint_pos) + [0.0]
-
-        # 手動設置 velocity 和 effort 為零
-        zero_velocity = [0.0] * len(joint_pos_with_gripper)  # 設定為和 joint_pos 一樣長的零列表
-        zero_effort = [0.0] * len(joint_pos_with_gripper)    # 設定為和 joint_pos 一樣長的零列表
-
-        # 將 msg 中的資料與設定的零值儲存到 puppet_arm_left_deque 和 puppet_arm_right_deque 中
-        puppet_arm_left = {
-            'position': joint_pos_with_gripper,
-            'velocity': zero_velocity,
-            'effort': zero_effort,
-            'header': header  # 使用 ROS Header 物件
-        }
-        
-        puppet_arm_right = {
-            'position': joint_pos_with_gripper,  # 如果左右手臂資料相同，這裡可以根據需求修改
-            'velocity': zero_velocity,
-            'effort': zero_effort,
-            'header': header  # 使用 ROS Header 物件
-        }
-
-        # 將資料加入 deque
-        self.puppet_arm_left_deque.append(puppet_arm_left)
-        self.puppet_arm_right_deque.append(puppet_arm_right)
-
-
-
     def init_ros(self):
         rospy.init_node('joint_state_publisher', anonymous=True)
-        rospy.wait_for_service('tm_driver/set_positions')
         rospy.Subscriber(self.args.img_left_topic, Image, self.img_left_callback, queue_size=1000, tcp_nodelay=True)
         rospy.Subscriber(self.args.img_right_topic, Image, self.img_right_callback, queue_size=1000, tcp_nodelay=True)
         rospy.Subscriber(self.args.img_front_topic, Image, self.img_front_callback, queue_size=1000, tcp_nodelay=True)
@@ -677,14 +660,12 @@ class RosOperator:
             rospy.Subscriber(self.args.img_left_depth_topic, Image, self.img_left_depth_callback, queue_size=1000, tcp_nodelay=True)
             rospy.Subscriber(self.args.img_right_depth_topic, Image, self.img_right_depth_callback, queue_size=1000, tcp_nodelay=True)
             rospy.Subscriber(self.args.img_front_depth_topic, Image, self.img_front_depth_callback, queue_size=1000, tcp_nodelay=True)
-        # rospy.Subscriber(self.args.puppet_arm_left_topic, JointState, self.puppet_arm_left_callback, queue_size=1000, tcp_nodelay=True)
-        # rospy.Subscriber(self.args.puppet_arm_right_topic, JointState, self.puppet_arm_right_callback, queue_size=1000, tcp_nodelay=True)
-        rospy.Subscriber('/feedback_states', FeedbackState, self.feedback_callback, queue_size=1000, tcp_nodelay=True)
+        rospy.Subscriber(self.args.puppet_arm_left_topic, JointState, self.puppet_arm_left_callback, queue_size=1000, tcp_nodelay=True)
+        rospy.Subscriber(self.args.puppet_arm_right_topic, JointState, self.puppet_arm_right_callback, queue_size=1000, tcp_nodelay=True)
         rospy.Subscriber(self.args.robot_base_topic, Odometry, self.robot_base_callback, queue_size=1000, tcp_nodelay=True)
         self.puppet_arm_left_publisher = rospy.Publisher(self.args.puppet_arm_left_cmd_topic, JointState, queue_size=10)
         self.puppet_arm_right_publisher = rospy.Publisher(self.args.puppet_arm_right_cmd_topic, JointState, queue_size=10)
         self.robot_base_publisher = rospy.Publisher(self.args.robot_base_cmd_topic, Twist, queue_size=10)
-
 
 
 def get_arguments():
@@ -722,18 +703,18 @@ def get_arguments():
     parser.add_argument('--pre_norm', action='store_true', required=False)
 
     parser.add_argument('--img_front_topic', action='store', type=str, help='img_front_topic',
-                        default='/camera/image', required=False)
+                        default='/camera_f/color/image_raw', required=False)
     parser.add_argument('--img_left_topic', action='store', type=str, help='img_left_topic',
-                        default='/camera/image', required=False)
+                        default='/camera_l/color/image_raw', required=False)
     parser.add_argument('--img_right_topic', action='store', type=str, help='img_right_topic',
-                        default='/camera/image', required=False)
+                        default='/camera_r/color/image_raw', required=False)
     
     parser.add_argument('--img_front_depth_topic', action='store', type=str, help='img_front_depth_topic',
-                        default='/camera/image', required=False)
+                        default='/camera_f/depth/image_raw', required=False)
     parser.add_argument('--img_left_depth_topic', action='store', type=str, help='img_left_depth_topic',
-                        default='/camera/image', required=False)
+                        default='/camera_l/depth/image_raw', required=False)
     parser.add_argument('--img_right_depth_topic', action='store', type=str, help='img_right_depth_topic',
-                        default='/camera/image', required=False)
+                        default='/camera_r/depth/image_raw', required=False)
     
     parser.add_argument('--puppet_arm_left_cmd_topic', action='store', type=str, help='puppet_arm_left_cmd_topic',
                         default='/master/joint_left', required=False)
@@ -783,6 +764,3 @@ def main():
 if __name__ == '__main__':
     main()
 # python act/inference.py --ckpt_dir ~/train0314/
-
-
-#  export LD_LIBRARY_PATH=$(conda info --base)/envs/new_ros_env/lib:$LD_LIBRARY_PATH
