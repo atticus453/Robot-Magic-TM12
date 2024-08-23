@@ -1,0 +1,2 @@
+camera_pkg
+-DCATKIN_DEVEL_PREFIX=/home/janus/camera/devel -DCMAKE_INSTALL_PREFIX=/home/janus/camera/install -G Unix Makefiles
