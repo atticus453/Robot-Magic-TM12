@@ -1,0 +1,4 @@
+name: camera_receive_env
+channels:
+  - defaults
+prefix: /home/janus/miniconda3/envs/camera

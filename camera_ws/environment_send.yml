@@ -1,0 +1,7 @@
+name: camera_send_env
+channels:
+  - defaults
+prefix: C:\Users\i7-box02\miniconda3\envs\camera
+
+
+
