@@ -5,7 +5,7 @@
 ### Repo Structure
 - ``tmr_ros1`` TM12 ROS1 Driver
 - ``cobot_nagic-main`` Integrate **TM12 ROS control** with **ACT**
-
+- ``camera`` Camera setup and Image publish on ROS
 
 ### Installation
     
@@ -14,11 +14,31 @@
     (create a virtual env eith conda)
     $ conda env create -f environment.yml
     
-    
+### Camera Setup
+
+    (On server,the computer harboring ACT)
+    $ cd ~/Robot-Magic-TM12/camera/src/camera_pkg
+    $ conda env create -f environment_receive.yml
+    $ conda activate camera_receive_env
+    $ cd ~/Robot-Magic-TM12/camera/
+    $ catkin_make
+    $ source devel/setup.sh
+    $ rosrun camera_pkg receive.py
+    $ rosrun camera_pkg receive_depth.py
+
+
+    (On Win10,the computer that connect with cameras)
+    $ cd ~/Robot-Magic-TM12/camera/src/camera_send
+    $ conda env create -f environment_send.yml
+    $ conda activate camera_send_env
+    $ python camera.py
+    $ python depthcamera.py
+
+
 ### Example Usages #1: Launch tm12 in Gazebo with Camera
     
     $ conda activate ros_env_tm12
-    $ cd ~/robot_magic_tm12/tmr_ros1
+    $ cd ~/Robot-Magic-TM12/tmr_ros1
     $ source devel/setup.sh
     $ roslaunch tm_gazebo tm12_gazebo.launch
     

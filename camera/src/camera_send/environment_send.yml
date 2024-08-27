@@ -1,4 +1,4 @@
-name: realsense_env
+name: camera_send_env
 channels:
   - defaults
 dependencies:
