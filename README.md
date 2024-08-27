@@ -3,8 +3,8 @@
 
 
 ### Repo Structure
-- ``tmr_ros1`` TM12 ROS1 Driver
-- ``cobot_nagic-main`` Integrate **TM12 ROS control** with **ACT**
+- ``tmr2_ros1`` TM12 ROS1 Driver
+- ``aloha-jam`` Integrate **TM12 ROS control** with **ACT**
 
 
 ### Installation
