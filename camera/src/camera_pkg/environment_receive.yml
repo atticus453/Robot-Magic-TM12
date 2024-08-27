@@ -1,0 +1,4 @@
+name: camera
+channels:
+  - defaults
+prefix: /home/janus/miniconda3/envs/camera
