@@ -1,8 +1,0 @@
-prefix=/home/jiayulin/robot_magic_tm12/tmr_ros1/install
-
-Name: tm_msgs
-Description: Description of tm_msgs
-Version: 1.1.2
-Cflags: -I${prefix}/include
-Libs: -L${prefix}/lib 
-Requires: message_runtime std_msgs sensor_msgs geometry_msgs

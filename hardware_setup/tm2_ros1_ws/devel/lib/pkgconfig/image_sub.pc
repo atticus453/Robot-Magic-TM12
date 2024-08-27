@@ -1,0 +1,8 @@
+prefix=/home/jiayulin/robot_magic_tm12/hardware_setup/tm2_ros1_ws/devel
+
+Name: image_sub
+Description: Description of image_sub
+Version: 2.0.0
+Cflags: 
+Libs: -L${prefix}/lib 
+Requires: 

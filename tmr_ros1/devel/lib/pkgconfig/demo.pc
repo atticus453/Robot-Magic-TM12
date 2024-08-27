@@ -1,8 +1,0 @@
-prefix=/home/jiayulin/robot_magic_tm12/tmr_ros1/devel
-
-Name: demo
-Description: Description of demo
-Version: 1.0.0
-Cflags: 
-Libs: -L${prefix}/lib 
-Requires: 

@@ -1,0 +1,2 @@
+tm2_ros1/demo:tm2_ros1/image_sub:tm2_ros1/tm12s_moveit_config:tm2_ros1/tm14s_moveit_config:tm2_ros1/tm25s_moveit_config:tm2_ros1/tm5s_moveit_config:tm2_ros1/tm7s_moveit_config:tm2_ros1/tm_demo:tm2_ros1/tm_description:tm2_ros1/tm_driver:tm2_ros1/tm_image:tm2_ros1/tm_inspect:tm2_ros1/tm_msgs
+-DCATKIN_DEVEL_PREFIX=/home/jiayulin/robot_magic_tm12/hardware_setup/tm2_ros1_ws/devel -DCMAKE_INSTALL_PREFIX=/home/jiayulin/robot_magic_tm12/hardware_setup/tm2_ros1_ws/install -G Unix Makefiles

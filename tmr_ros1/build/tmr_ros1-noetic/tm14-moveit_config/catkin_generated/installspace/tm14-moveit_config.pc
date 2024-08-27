@@ -1,8 +1,0 @@
-prefix=/home/jiayulin/robot_magic_tm12/tmr_ros1/install
-
-Name: tm14-moveit_config
-Description: Description of tm14-moveit_config
-Version: 0.3.0
-Cflags: 
-Libs: -L${prefix}/lib 
-Requires: 

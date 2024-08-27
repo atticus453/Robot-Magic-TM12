@@ -1,8 +1,0 @@
-prefix=/home/jiayulin/robot_magic_tm12/tmr_ros1/install
-
-Name: demo
-Description: Description of demo
-Version: 1.0.0
-Cflags: 
-Libs: -L${prefix}/lib 
-Requires: 

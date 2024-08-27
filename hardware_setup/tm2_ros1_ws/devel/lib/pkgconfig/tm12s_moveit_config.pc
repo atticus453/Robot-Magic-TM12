@@ -1,0 +1,8 @@
+prefix=/home/jiayulin/robot_magic_tm12/hardware_setup/tm2_ros1_ws/devel
+
+Name: tm12s_moveit_config
+Description: Description of tm12s_moveit_config
+Version: 0.3.1
+Cflags: 
+Libs: -L${prefix}/lib 
+Requires: 

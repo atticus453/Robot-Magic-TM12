@@ -1,0 +1,8 @@
+prefix=/home/jiayulin/robot_magic_tm12/hardware_setup/tm2_ros1_ws/install
+
+Name: tm_image
+Description: Description of tm_image
+Version: 2.0.0
+Cflags: 
+Libs: -L${prefix}/lib 
+Requires: 
